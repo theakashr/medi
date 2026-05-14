@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    
+    // Admin check: Bootstrap akashakashr505@gmail.com or check users collection
+    function isAdmin() { 
+      return isVerified() && (
+        request.auth.token.email == 'akashakashr505@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+    
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+
+    // --- Validation Helpers ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string && data.uid.size() < 128 &&
+             data.email is string && data.email.size() < 256 &&
+             data.role in ['admin', 'staff'];
+    }
+
+    function isValidMedicine(data) {
+      return data.keys().hasAll(['name', 'price', 'stock']) &&
+             data.name is string && data.name.size() < 200 &&
+             data.price is number && data.price >= 0 &&
+             data.stock is int && data.stock >= 0;
+    }
+
+    function isValidCustomer(data) {
+      return data.keys().hasAll(['name', 'phone']) &&
+             data.name is string && data.name.size() < 100 &&
+             data.phone is string && data.phone.size() < 20;
+    }
+
+    function isValidBill(data) {
+      return data.keys().hasAll(['billNumber', 'items', 'finalAmount', 'paymentMethod', 'staffId', 'createdAt']) &&
+             data.billNumber is string &&
+             data.items is list && data.items.size() > 0 &&
+             data.finalAmount is number && data.finalAmount >= 0 &&
+             data.staffId == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    // --- Collection Routes ---
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().role == 'staff'; // Default to staff
+      allow update: if (isOwner(userId) || isAdmin()) && 
+                    isValidUser(incoming()) &&
+                    (isAdmin() || incoming().role == existing().role); // Only admin can change roles
+    }
+
+    match /medicines/{medicineId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && isValidMedicine(incoming()) && isValidId(medicineId);
+      allow update: if (isAdmin() || (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['stock']))) && 
+                    isValidMedicine(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /customers/{customerId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidCustomer(incoming()) && isValidId(customerId);
+      allow update: if isSignedIn() && isValidCustomer(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /bills/{billId} {
+      allow read: if isSignedIn() && (resource.data.staffId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidBill(incoming()) && isValidId(billId);
+      allow update: if false; // Bills are immutable
+      allow list: if isSignedIn() && (resource.data.staffId == request.auth.uid || isAdmin());
+    }
+
+    match /reports/{reportId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

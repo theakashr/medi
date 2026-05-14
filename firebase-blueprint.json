@@ -1,0 +1,117 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with role and preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "staff"] },
+        "businessName": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "gstNumber": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Medicine": {
+      "title": "Medicine",
+      "description": "Medicine inventory item",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "stock": { "type": "number" },
+        "lowStockThreshold": { "type": "number" },
+        "expiryDate": { "type": "string", "format": "date" },
+        "supplier": { "type": "string" },
+        "barcode": { "type": "string" },
+        "description": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "price", "stock"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer details and loyalty info",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "loyaltyPoints": { "type": "number" },
+        "totalSpent": { "type": "number" },
+        "lastPurchase": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "phone"]
+    },
+    "Bill": {
+      "title": "Bill/Invoice",
+      "description": "Sales record",
+      "type": "object",
+      "properties": {
+        "billNumber": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "medicineId": { "type": "string" },
+              "name": { "type": "string" },
+              "quantity": { "type": "number" },
+              "price": { "type": "number" },
+              "subtotal": { "type": "number" }
+            }
+          }
+        },
+        "totalAmount": { "type": "number" },
+        "gstAmount": { "type": "number" },
+        "discount": { "type": "number" },
+        "finalAmount": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["cash", "upi", "card"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["billNumber", "items", "finalAmount", "paymentMethod"]
+    },
+    "Report": {
+      "title": "Daily Report",
+      "description": "Aggregated daily sales and profit",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "totalSales": { "type": "number" },
+        "totalOrders": { "type": "number" },
+        "totalProfit": { "type": "number" },
+        "topSellingMedicines": { "type": "array" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Public and private user data"
+    },
+    "/medicines/{medicineId}": {
+      "schema": "Medicine",
+      "description": "Inventory collection"
+    },
+    "/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Customer database"
+    },
+    "/bills/{billId}": {
+      "schema": "Bill",
+      "description": "Invoices and sales records"
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Daily/Monthly aggregated reports"
+    }
+  }
+}
