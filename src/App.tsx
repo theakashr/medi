@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import React, { useState, useEffect } from 'react';
 import { auth } from './lib/firebase';
@@ -37,7 +37,7 @@ export default function App() {
   if (loading) return <LoadingFallback />;
 
   return (
-    <HashRouter>
+    <BrowserRouter>
       <React.Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route 
@@ -78,6 +78,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </React.Suspense>
-    </HashRouter>
+    </BrowserRouter>
   );
 }
